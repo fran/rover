@@ -251,6 +251,39 @@ describe('IterationStatusManager', () => {
     });
   });
 
+  describe('failCreditExhausted', () => {
+    it('should mark status as credit_exhausted with step and error', () => {
+      const status = IterationStatusManager.createInitial(
+        statusFilePath,
+        'task-credits',
+        'Planning'
+      );
+
+      status.failCreditExhausted('plan', 'AI credits exhausted');
+
+      expect(status.status).toBe('credit_exhausted');
+      expect(status.currentStep).toBe('plan');
+      expect(status.progress).toBe(100);
+      expect(status.error).toBe('AI credits exhausted');
+      expect(status.completedAt).toBeDefined();
+    });
+
+    it('should persist credit_exhausted to disk', () => {
+      const status = IterationStatusManager.createInitial(
+        statusFilePath,
+        'task-persist-credits',
+        'Start'
+      );
+
+      status.failCreditExhausted('execute', 'Quota exceeded');
+
+      const loaded = IterationStatusManager.load(statusFilePath);
+      expect(loaded.status).toBe('credit_exhausted');
+      expect(loaded.error).toBe('Quota exceeded');
+      expect(loaded.completedAt).toBeDefined();
+    });
+  });
+
   describe('fail', () => {
     it('should mark status as failed with error message', () => {
       const status = IterationStatusManager.createInitial(

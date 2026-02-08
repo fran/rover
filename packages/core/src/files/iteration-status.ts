@@ -149,6 +149,20 @@ export class IterationStatusManager {
   }
 
   /**
+   * Mark status as credit exhausted (AI quota/credits exhausted; task can be retried later)
+   */
+  failCreditExhausted(currentStep: string, error: string): void {
+    const now = new Date().toISOString();
+    this.data.status = 'credit_exhausted';
+    this.data.currentStep = currentStep;
+    this.data.progress = 100;
+    this.data.error = error;
+    this.data.updatedAt = now;
+    this.data.completedAt = now;
+    this.save();
+  }
+
+  /**
    * Save current status to disk
    */
   private save(): void {

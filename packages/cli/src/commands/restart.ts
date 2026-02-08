@@ -36,7 +36,7 @@ interface TaskRestartOutput extends CLIJsonOutput {
 }
 
 /**
- * Restart a task that is in NEW or FAILED status.
+ * Restart a task that is in NEW, FAILED, or PAUSED_CREDITS status.
  *
  * Re-executes a task that either never started (NEW) or previously failed.
  * Resets the task state, ensures the git worktree exists, and spawns a new
@@ -87,12 +87,12 @@ const restartCommand = async (
       throw new TaskNotFoundError(numericTaskId);
     }
 
-    // Check if task is in NEW or FAILED status
-    if (!task.isNew() && !task.isFailed()) {
-      jsonOutput.error = `Task ${taskId} is not in NEW or FAILED status (current: ${task.status})`;
+    // Check if task is in NEW, FAILED, or PAUSED_CREDITS status
+    if (!task.isNew() && !task.isFailed() && !task.isPausedCredits()) {
+      jsonOutput.error = `Task ${taskId} is not in NEW, FAILED, or PAUSED_CREDITS status (current: ${task.status})`;
       await exitWithError(jsonOutput, {
         tips: [
-          'Only NEW and FAILED tasks can be restarted',
+          'Only NEW, FAILED, and PAUSED_CREDITS (credits exhausted) tasks can be restarted',
           'Use ' +
             colors.cyan(`rover inspect ${taskId}`) +
             colors.gray(' to find out the current task status'),

@@ -31,6 +31,21 @@ export class AuthenticationError extends AgentError {
 }
 
 /**
+ * Credit exhausted error - AI subscription quota/credits exhausted
+ */
+export class CreditExhaustedError extends AgentError {
+  readonly code = 'CREDIT_EXHAUSTED';
+  readonly isRetryable = true;
+
+  constructor(
+    message: string,
+    public readonly tool?: string
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Rate limit error - API rate limits exceeded
  */
 export class RateLimitError extends AgentError {
@@ -168,6 +183,17 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     errorClass: AuthenticationError,
     extractMessage: () =>
       'Authentication required - tool is waiting for authorization',
+  },
+
+  // Credit/quota exhaustion (check before generic rate limit)
+  {
+    pattern:
+      /quota[_\s]exceeded|credits[_\s]exhausted|insufficient[_\s]quota|usage[_\s]limit|credit[_\s]limit|out[_\s]of[_\s]credits/i,
+    errorClass: CreditExhaustedError,
+    extractMessage: (match, fullText) => {
+      const jsonMatch = fullText.match(/"message":"([^"]+)"/);
+      return jsonMatch ? jsonMatch[1] : 'AI credits or quota exhausted';
+    },
   },
 
   // Rate limit errors
@@ -325,6 +351,17 @@ function classifyJsonError(jsonError: any, tool?: string): AgentError {
     message.toLowerCase().includes('invalid api key')
   ) {
     return new AuthenticationError(message, tool);
+  }
+
+  if (
+    errorType.includes('quota') ||
+    errorCode.includes('quota') ||
+    errorCode.includes('credit') ||
+    errorType.includes('credit') ||
+    message.toLowerCase().includes('credits exhausted') ||
+    message.toLowerCase().includes('quota exceeded')
+  ) {
+    return new CreditExhaustedError(message, tool);
   }
 
   if (errorType.includes('rate') || errorCode.includes('rate')) {

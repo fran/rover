@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TaskDescriptionManager } from '../task-description.js';
+import { IterationManager } from '../iteration.js';
+import { IterationStatusManager } from '../iteration-status.js';
 import {
   TaskStatus,
   CURRENT_TASK_DESCRIPTION_SCHEMA_VERSION,
@@ -175,6 +177,27 @@ describe('TaskDescriptionManager', () => {
       task.resetToNew();
       expect(task.status).toBe('NEW');
       expect(task.isNew()).toBe(true);
+    });
+
+    it('should support PAUSED_CREDITS status', () => {
+      const taskPath = getTaskPath(14);
+      const task = TaskDescriptionManager.create(taskPath, {
+        id: 14,
+        title: 'Test Task',
+        description: 'Test description',
+        inputs: new Map(),
+        workflowName: 'swe',
+      });
+
+      task.setStatus('PAUSED_CREDITS', {
+        timestamp: new Date().toISOString(),
+        error: 'AI credits exhausted',
+      });
+
+      expect(task.status).toBe('PAUSED_CREDITS');
+      expect(task.isPausedCredits()).toBe(true);
+      expect(task.failedAt).toBeDefined();
+      expect(task.error).toBe('AI credits exhausted');
     });
 
     it('should handle MERGED and PUSHED in status validation', () => {
@@ -414,6 +437,41 @@ describe('TaskDescriptionManager', () => {
     });
   });
 
+  describe('updateStatusFromIteration', () => {
+    it('should set task to PAUSED_CREDITS when iteration status is credit_exhausted', () => {
+      const taskPath = getTaskPath(15);
+      const task = TaskDescriptionManager.create(taskPath, {
+        id: 15,
+        title: 'Credit Exhausted Task',
+        description: 'Test',
+        inputs: new Map(),
+        workflowName: 'swe',
+      });
+      const iterationsPath = join(taskPath, 'iterations', '1');
+      const { mkdirSync } = require('node:fs');
+      mkdirSync(iterationsPath, { recursive: true });
+      IterationManager.createInitial(
+        iterationsPath,
+        15,
+        'Credit Exhausted Task',
+        'Test'
+      );
+      const statusPath = join(iterationsPath, 'status.json');
+      const status = IterationStatusManager.createInitial(
+        statusPath,
+        '15',
+        'Step'
+      );
+      status.failCreditExhausted('plan', 'Quota exceeded');
+
+      task.updateStatusFromIteration();
+
+      expect(task.status).toBe('PAUSED_CREDITS');
+      expect(task.isPausedCredits()).toBe(true);
+      expect(task.error).toBe('Quota exceeded');
+    });
+  });
+
   describe('utility methods', () => {
     it('should provide correct utility methods for new statuses', () => {
       const taskPath = getTaskPath(9);
@@ -429,12 +487,23 @@ describe('TaskDescriptionManager', () => {
       expect(task.isNew()).toBe(true);
       expect(task.isMerged()).toBe(false);
       expect(task.isPushed()).toBe(false);
+      expect(task.isPausedCredits()).toBe(false);
 
-      // Test MERGED status
+      // Test PAUSED_CREDITS status
+      task.setStatus('PAUSED_CREDITS', {
+        timestamp: new Date().toISOString(),
+        error: 'Credits exhausted',
+      });
+      expect(task.isPausedCredits()).toBe(true);
+      expect(task.isNew()).toBe(false);
+
+      // Reset and test MERGED status
+      task.resetToNew();
       task.markMerged();
       expect(task.isNew()).toBe(false);
       expect(task.isMerged()).toBe(true);
       expect(task.isPushed()).toBe(false);
+      expect(task.isPausedCredits()).toBe(false);
       expect(task.isCompleted()).toBe(false); // MERGED is different from COMPLETED
 
       // Reset and test PUSHED status
@@ -443,6 +512,7 @@ describe('TaskDescriptionManager', () => {
       expect(task.isNew()).toBe(false);
       expect(task.isMerged()).toBe(false);
       expect(task.isPushed()).toBe(true);
+      expect(task.isPausedCredits()).toBe(false);
       expect(task.isCompleted()).toBe(false); // PUSHED is different from COMPLETED
     });
   });

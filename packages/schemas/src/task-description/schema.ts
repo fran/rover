@@ -15,6 +15,7 @@ export const TaskStatusSchema = z.enum([
   'ITERATING',
   'COMPLETED',
   'FAILED',
+  'PAUSED_CREDITS',
   'MERGED',
   'PUSHED',
 ]);

@@ -29,6 +29,7 @@ import {
   isWaitingForAuthentication,
   AgentError,
   AuthenticationError,
+  CreditExhaustedError,
   TimeoutError,
 } from './errors.js';
 import { basename, join } from 'node:path';
@@ -41,6 +42,8 @@ export interface RunnerStepResult {
   success: boolean;
   // Error
   error?: string;
+  // Error code when failed (e.g. CREDIT_EXHAUSTED for quota/credits exhausted)
+  errorCode?: string;
   // Duration in seconds
   duration: number;
   // Consumed tokens
@@ -330,6 +333,10 @@ export class Runner {
       id: this.step.id,
       success: !outputs.has('error'), // Success if no error was stored
       error: outputs.get('error'),
+      errorCode:
+        agentError instanceof CreditExhaustedError
+          ? agentError.code
+          : undefined,
       duration: (performance.now() - start) / 1000, // Convert to seconds
       tokens: usageStats?.tokens,
       cost: usageStats?.cost,

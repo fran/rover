@@ -273,6 +273,8 @@ export class TaskDescriptionManager {
         return 'COMPLETED';
       case 'failed':
         return 'FAILED';
+      case 'paused_credits':
+        return 'PAUSED_CREDITS';
       case 'merged':
         return 'MERGED';
       case 'pushed':
@@ -345,6 +347,12 @@ export class TaskDescriptionManager {
         this.data.completedAt = timestamp;
         break;
       case 'FAILED':
+        this.data.failedAt = timestamp;
+        if (metadata?.error) {
+          this.data.error = metadata.error;
+        }
+        break;
+      case 'PAUSED_CREDITS':
         this.data.failedAt = timestamp;
         if (metadata?.error) {
           this.data.error = metadata.error;
@@ -586,6 +594,11 @@ export class TaskDescriptionManager {
           break;
         case 'failed':
           statusName = 'FAILED';
+          timestamp = status.completedAt;
+          error = status.error;
+          break;
+        case 'credit_exhausted':
+          statusName = 'PAUSED_CREDITS';
           timestamp = status.completedAt;
           error = status.error;
           break;
@@ -882,6 +895,13 @@ export class TaskDescriptionManager {
    */
   isFailed(): boolean {
     return this.data.status === 'FAILED';
+  }
+
+  /**
+   * Check if task is paused due to AI credit exhaustion
+   */
+  isPausedCredits(): boolean {
+    return this.data.status === 'PAUSED_CREDITS';
   }
 
   /**

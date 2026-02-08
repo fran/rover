@@ -465,7 +465,11 @@ const inspectCommand = async (
 
       const tips = [];
 
-      if (task.status === 'NEW' || task.status === 'FAILED') {
+      if (
+        task.status === 'NEW' ||
+        task.status === 'FAILED' ||
+        task.status === 'PAUSED_CREDITS'
+      ) {
         tips.push(
           'Use ' + colors.cyan(`rover restart ${taskId}`) + ' to retry it'
         );

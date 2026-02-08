@@ -232,7 +232,7 @@ describe('restart command', async () => {
       expect(reloadedTask.restartCount).toBe(1);
     });
 
-    it('should reject restarting tasks not in NEW or FAILED status', async () => {
+    it('should reject restarting tasks not in NEW, FAILED, or PAUSED_CREDITS status', async () => {
       const { exitWithError } = await import('../../utils/exit.js');
       const mockExitWithError = vi.mocked(exitWithError);
 
@@ -258,15 +258,42 @@ describe('restart command', async () => {
       // Verify error was called
       expect(mockExitWithError).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.stringContaining('not in NEW or FAILED status'),
+          error: expect.stringContaining(
+            'not in NEW, FAILED, or PAUSED_CREDITS status'
+          ),
         }),
         expect.objectContaining({
           tips: expect.arrayContaining([
-            'Only NEW and FAILED tasks can be restarted',
+            'Only NEW, FAILED, and PAUSED_CREDITS (credits exhausted) tasks can be restarted',
           ]),
           telemetry: expect.anything(),
         })
       );
+    });
+
+    it('should allow restarting a task in PAUSED_CREDITS status', async () => {
+      const taskId = 791;
+      const taskDir = join(testDir, '.rover', 'tasks', taskId.toString());
+
+      const task = TaskDescriptionManager.create(taskDir, {
+        id: taskId,
+        title: 'Paused Task',
+        description: 'Task paused due to credits',
+        inputs: new Map(),
+        workflowName: 'swe',
+      });
+      task.setStatus('PAUSED_CREDITS', {
+        timestamp: new Date().toISOString(),
+        error: 'AI credits exhausted',
+      });
+      expect(task.status).toBe('PAUSED_CREDITS');
+      expect(task.isPausedCredits()).toBe(true);
+
+      await restartCommand(taskId.toString(), { json: true });
+
+      const reloadedTask = TaskDescriptionManager.load(taskDir, taskId);
+      expect(reloadedTask.status).toBe('IN_PROGRESS');
+      expect(reloadedTask.restartCount).toBe(1);
     });
 
     it('should handle invalid task IDs', async () => {

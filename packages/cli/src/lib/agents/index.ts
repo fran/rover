@@ -93,6 +93,45 @@ export class InvokeAIAgentError extends Error {
   }
 }
 
+export class CreditExhaustedError extends Error {
+  constructor(agent: string, message?: string) {
+    super(
+      message ??
+        `AI credits or quota exhausted for "${agent}". Use rover restart <task-id> when credits are available.`
+    );
+    this.name = 'CreditExhaustedError';
+  }
+}
+
+const CREDIT_EXHAUSTED_PATTERN =
+  /quota[_\s]exceeded|credits[_\s]exhausted|insufficient[_\s]quota|usage[_\s]limit|credit[_\s]limit|out[_\s]of[_\s]credits|429|rate[_\s]limit/i;
+
+/**
+ * Returns true if the error output indicates AI credit/quota exhaustion.
+ */
+export function isCreditExhaustedError(error: unknown): boolean {
+  const msg =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message)
+      : String(error);
+  const stderr =
+    typeof error === 'object' &&
+    error !== null &&
+    'stderr' in error &&
+    (error as { stderr?: unknown }).stderr != null
+      ? String((error as { stderr: string | Buffer }).stderr)
+      : '';
+  const stdout =
+    typeof error === 'object' &&
+    error !== null &&
+    'stdout' in error &&
+    (error as { stdout?: unknown }).stdout != null
+      ? String((error as { stdout: string | Buffer }).stdout)
+      : '';
+  const combined = `${msg}\n${stderr}\n${stdout}`;
+  return CREDIT_EXHAUSTED_PATTERN.test(combined);
+}
+
 /**
  * Retrieve the AIAgentTool instance based on the agent name.
  */

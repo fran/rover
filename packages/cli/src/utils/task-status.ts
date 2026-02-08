@@ -15,6 +15,8 @@ export const formatTaskStatus = (status: string): string => {
       return 'Running';
     case 'FAILED':
       return 'Failed';
+    case 'PAUSED_CREDITS':
+      return 'Paused (credits)';
     case 'ITERATING':
       return 'Iterating';
     case 'MERGED':
@@ -40,6 +42,8 @@ export const statusColor = (status: string): StyleFunction => {
       return colors.magenta;
     case 'FAILED':
       return colors.red;
+    case 'PAUSED_CREDITS':
+      return colors.yellow;
     case 'MERGED':
       return colors.green;
     case 'PUSHED':

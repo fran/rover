@@ -8,7 +8,9 @@ import {
 import {
   AIAgentTool,
   findKeychainCredentials,
+  CreditExhaustedError,
   InvokeAIAgentError,
+  isCreditExhaustedError,
   MissingAIAgentError,
 } from './index.js';
 import { PromptBuilder, IPromptTask } from '../prompts/index.js';
@@ -125,6 +127,12 @@ You MUST output a valid JSON string as an output. Just output the JSON string an
         return result;
       }
     } catch (error) {
+      if (isCreditExhaustedError(error)) {
+        throw new CreditExhaustedError(
+          this.AGENT_BIN,
+          error instanceof Error ? error.message : String(error)
+        );
+      }
       throw new InvokeAIAgentError(this.AGENT_BIN, error);
     }
   }

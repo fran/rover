@@ -146,6 +146,8 @@ export const runCommand = async (
   // Declare status manager outside try block so it's accessible in catch
   let statusManager: IterationStatusManager | undefined;
   let totalDuration = 0;
+  /** When workflow stops due to a step failure, track for status.json (credit_exhausted vs failed) */
+  let lastFailureCause: { stepName: string; errorCode?: string } | null = null;
 
   try {
     // Validate status tracking options
@@ -350,6 +352,10 @@ export const runCommand = async (
                   );
                   output.success = false;
                   output.error = `Workflow stopped due to step failure: ${result.error}`;
+                  lastFailureCause = {
+                    stepName: step.name,
+                    errorCode: result.errorCode,
+                  };
                   break;
                 } else {
                   console.log(
@@ -413,6 +419,10 @@ export const runCommand = async (
               );
               output.success = false;
               output.error = `Workflow stopped due to step failure: ${result.error}`;
+              lastFailureCause = {
+                stepName: step.name,
+                errorCode: result.errorCode,
+              };
               break;
             } else {
               console.log(
@@ -481,7 +491,15 @@ export const runCommand = async (
   }
 
   if (!output.success) {
-    statusManager?.fail('Workflow execution', output.error || 'Unknown error');
+    const failureMessage = output.error || 'Unknown error';
+    if (lastFailureCause?.errorCode === 'CREDIT_EXHAUSTED') {
+      statusManager?.failCreditExhausted(
+        lastFailureCause.stepName,
+        failureMessage
+      );
+    } else {
+      statusManager?.fail('Workflow execution', failureMessage);
+    }
 
     console.log(colors.red(`\n✗ ${output.error}`));
   }

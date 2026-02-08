@@ -9,6 +9,7 @@ describe('formatTaskStatus', () => {
     expect(formatTaskStatus('COMPLETED')).toBe('Completed');
     expect(formatTaskStatus('RUNNING')).toBe('Running');
     expect(formatTaskStatus('FAILED')).toBe('Failed');
+    expect(formatTaskStatus('PAUSED_CREDITS')).toBe('Paused (credits)');
     expect(formatTaskStatus('ITERATING')).toBe('Iterating');
     expect(formatTaskStatus('MERGED')).toBe('Merged');
     expect(formatTaskStatus('PUSHED')).toBe('Pushed');
@@ -36,6 +37,7 @@ describe('statusColor', () => {
     expect(statusColor('RUNNING')('test')).toBe(colors.cyan('test'));
     expect(statusColor('ITERATING')('test')).toBe(colors.magenta('test'));
     expect(statusColor('FAILED')('test')).toBe(colors.red('test'));
+    expect(statusColor('PAUSED_CREDITS')('test')).toBe(colors.yellow('test'));
     expect(statusColor('MERGED')('test')).toBe(colors.green('test'));
     expect(statusColor('PUSHED')('test')).toBe(colors.green('test'));
   });

@@ -120,7 +120,7 @@ const buildTaskRow = (
 
   // Determine end time based on task status
   let endTime: string | undefined;
-  if (taskStatus === 'FAILED') {
+  if (taskStatus === 'FAILED' || taskStatus === 'PAUSED_CREDITS') {
     endTime = task.failedAt;
   } else if (['COMPLETED', 'MERGED', 'PUSHED'].includes(taskStatus)) {
     endTime = task.completedAt;
@@ -253,7 +253,9 @@ const listCommand = async (
 
         // Check if this is a terminal status that should trigger onComplete hooks
         const isTerminalStatus =
-          currentStatus === 'COMPLETED' || currentStatus === 'FAILED';
+          currentStatus === 'COMPLETED' ||
+          currentStatus === 'FAILED' ||
+          currentStatus === 'PAUSED_CREDITS';
 
         // Check if hook has already been fired for this status transition
         const hookAlreadyFired =

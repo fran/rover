@@ -23,12 +23,14 @@ import type {
 } from 'rover-schemas';
 import { WorkflowManager, IterationStatusManager, VERBOSE } from 'rover-core';
 import { ACPClient } from './acp-client.js';
+import { parseAgentError } from './errors.js';
 import { copyFileSync, rmSync } from 'node:fs';
 
 export interface ACPRunnerStepResult {
   id: string;
   success: boolean;
   error?: string;
+  errorCode?: string;
   duration: number;
   outputs: Map<string, string>;
 }
@@ -464,10 +466,21 @@ export class ACPRunner {
 
       outputs.set('error', errorMessage);
 
+      // Classify error for credit exhaustion (so run command can write credit_exhausted to status.json)
+      const classified = parseAgentError(
+        errorMessage,
+        errorMessage,
+        null,
+        this.tool
+      );
+      const errorCode =
+        classified.code === 'CREDIT_EXHAUSTED' ? classified.code : undefined;
+
       return {
         id: step.id,
         success: false,
         error: errorMessage,
+        errorCode,
         duration: (performance.now() - start) / 1000,
         outputs,
       };
